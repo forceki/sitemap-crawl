@@ -1,0 +1,17 @@
+[package]
+name = "sitemap-crawl"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["rustls-tls"], default-features = false }
+scraper = "0.22"
+url = "2"
+futures = "0.3"
+rust_xlsxwriter = "0.93"
+chrono = "0.4"
+quick-xml = "0.37"
+clap = { version = "4", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter", "chrono"] }
