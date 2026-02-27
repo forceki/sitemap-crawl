@@ -5,9 +5,13 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use futures::stream::{FuturesUnordered, StreamExt};
 use reqwest::Client;
 use tokio::sync::Semaphore;
-use tracing::{info, warn, error, debug};
+use tokio::sync::mpsc;
+use tracing::error;
 
 use crate::config::AppConfig;
+use crate::user_agents::random_user_agent;
+
+use rand::Rng;
 
 #[derive(Debug, Clone)]
 pub struct UrlStatus {
@@ -32,19 +36,21 @@ impl fmt::Display for UrlStatus {
     }
 }
 
-pub async fn check_urls(urls: &[String], config: &AppConfig) -> Vec<UrlStatus> {
+pub async fn check_urls_stream(
+    urls: &[String],
+    config: &AppConfig,
+    tx: mpsc::UnboundedSender<UrlStatus>,
+) {
     let client = Client::builder()
-        .user_agent(&config.user_agent)
         .timeout(config.timeout_duration())
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .expect("Failed to build HTTP client");
 
     let semaphore = Arc::new(Semaphore::new(config.concurrency));
-    let delay = config.delay_duration();
+    let delay_ms = config.delay;
     let mut futures = FuturesUnordered::new();
 
-    let total = urls.len();
     let completed = Arc::new(AtomicUsize::new(0));
 
     for url in urls.iter() {
@@ -52,15 +58,18 @@ pub async fn check_urls(urls: &[String], config: &AppConfig) -> Vec<UrlStatus> {
         let sem = Arc::clone(&semaphore);
         let url = url.clone();
         let completed = Arc::clone(&completed);
+        let tx = tx.clone();
 
         futures.push(tokio::spawn(async move {
             let _permit = sem.acquire().await.expect("semaphore closed");
 
-            tokio::time::sleep(delay).await;
+            let random_delay = rand::rng().random_range(delay_ms..=delay_ms * 3);
+            tokio::time::sleep(std::time::Duration::from_millis(random_delay)).await;
 
-            let done = completed.fetch_add(1, Ordering::Relaxed) + 1;
+            let _done = completed.fetch_add(1, Ordering::Relaxed) + 1;
 
-            match client.get(&url).send().await {
+            let ua = random_user_agent();
+            let status = match client.get(&url).header("User-Agent", ua).send().await {
                 Ok(resp) => {
                     let code = resp.status().as_u16();
                     let text = resp.status().canonical_reason()
@@ -76,20 +85,6 @@ pub async fn check_urls(urls: &[String], config: &AppConfig) -> Vec<UrlStatus> {
                         None
                     };
 
-                    if code >= 400 {
-                        warn!(progress = format!("{}/{}", done, total), status = code, url = %url, "HTTP error");
-                    } else if code >= 300 {
-                        debug!(
-                            progress = format!("{}/{}", done, total),
-                            status = code,
-                            url = %url,
-                            redirect = redirect_url.as_deref().unwrap_or("-"),
-                            "Redirect"
-                        );
-                    } else {
-                        info!(progress = format!("{}/{}", done, total), status = code, url = %url, "OK");
-                    }
-
                     UrlStatus {
                         url,
                         status_code: Some(code),
@@ -99,13 +94,10 @@ pub async fn check_urls(urls: &[String], config: &AppConfig) -> Vec<UrlStatus> {
                 }
                 Err(e) => {
                     let text = if e.is_timeout() {
-                        warn!(progress = format!("{}/{}", done, total), url = %url, "Timeout");
                         "Timeout".to_string()
                     } else if e.is_connect() {
-                        warn!(progress = format!("{}/{}", done, total), url = %url, "Connection error");
                         "Connection Error".to_string()
                     } else {
-                        error!(progress = format!("{}/{}", done, total), url = %url, error = %e, "Request failed");
                         format!("{}", e)
                     };
 
@@ -116,19 +108,15 @@ pub async fn check_urls(urls: &[String], config: &AppConfig) -> Vec<UrlStatus> {
                         redirect_url: None,
                     }
                 }
-            }
+            };
+
+            let _ = tx.send(status);
         }));
     }
 
-    let mut results = Vec::with_capacity(total);
-
     while let Some(result) = futures.next().await {
-        match result {
-            Ok(status) => results.push(status),
-            Err(e) => error!(error = %e, "Task panicked"),
+        if let Err(e) = result {
+            error!(error = %e, "Task panicked");
         }
     }
-
-    results.sort_by(|a, b| a.url.cmp(&b.url));
-    results
 }

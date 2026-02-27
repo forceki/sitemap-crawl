@@ -15,3 +15,12 @@ quick-xml = "0.37"
 clap = { version = "4", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter", "chrono"] }
+rand = "0.9"
+indicatif = "0.17"
+
+[profile.release]
+opt-level = "z"       # optimize for size
+lto = true            # link-time optimization (cross-crate inlining)
+codegen-units = 1     # single codegen unit for best optimization
+panic = "abort"       # smaller binary, no unwinding
+strip = true          # strip debug symbols

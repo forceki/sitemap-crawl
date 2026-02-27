@@ -2,8 +2,11 @@ use reqwest::Client;
 use tracing::{warn, error, debug};
 use url::Url;
 
+use crate::user_agents::random_user_agent;
+
 pub async fn fetch_page(client: &Client, url: &Url) -> Option<String> {
-    match client.get(url.as_str()).send().await {
+    let ua = random_user_agent();
+    match client.get(url.as_str()).header("User-Agent", ua).send().await {
         Ok(resp) => {
             let status = resp.status();
             if !status.is_success() {

@@ -20,28 +20,19 @@ pub async fn parse_sitemap(sitemap_url: &str) -> Vec<String> {
     };
 
     let urls = extract_locs(&xml);
-    info!(count = urls.len(), "Parsed sitemap entries");
 
     if urls.iter().all(|u| u.ends_with(".xml") || u.ends_with(".xml.gz")) {
-        info!(count = urls.len(), "Detected sitemap index, fetching child sitemaps");
         let mut all_urls = Vec::new();
 
         for (i, child_sitemap) in urls.iter().enumerate() {
-            info!(
-                progress = format!("{}/{}", i + 1, urls.len()),
-                url = %child_sitemap,
-                "Downloading child sitemap"
-            );
             if let Some(child_xml) = fetch_xml(&client, child_sitemap).await {
                 let child_urls = extract_locs(&child_xml);
-                info!(count = child_urls.len(), url = %child_sitemap, "Parsed child sitemap");
                 all_urls.extend(child_urls);
             }
         }
 
         all_urls.sort();
         all_urls.dedup();
-        info!(count = all_urls.len(), "Total unique URLs from sitemap index");
         all_urls
     } else {
         let mut sorted = urls;
@@ -60,7 +51,6 @@ async fn fetch_xml(client: &Client, url: &str) -> Option<String> {
             }
             match resp.text().await {
                 Ok(body) => {
-                    info!(url = %url, bytes = body.len(), "Downloaded sitemap");
                     Some(body)
                 }
                 Err(e) => {
