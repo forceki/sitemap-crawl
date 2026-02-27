@@ -81,7 +81,11 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: latest-build
+          name: "Latest Build (Main Branch)"
           generate_release_notes: true
           files: |
             artifacts/**/*.tar.gz
             artifacts/**/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
