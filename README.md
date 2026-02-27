@@ -2,7 +2,7 @@
 
 A fast, concurrent **Sitemap Crawler & URL Status Checker** built in Rust.
 
-Crawl a website or parse a sitemap XML, then check the HTTP status of every URL and export the results to a timestamped `.xlsx` file.
+Crawl a website or parse a sitemap XML, then check the HTTP status of every URL and export the results to CSV in real-time.
 
 ---
 
@@ -11,30 +11,37 @@ Crawl a website or parse a sitemap XML, then check the HTTP status of every URL 
 - **Dual Mode** — crawl by following links _or_ parse a sitemap XML directly
 - **Concurrent** — powered by `tokio`, `FuturesUnordered`, and a configurable semaphore
 - **Status Checker** — checks every discovered URL for `200`, `301`, `404`, `500`, timeouts, etc.
-- **Rate Limiting** — configurable per-request delay to avoid getting blocked
+- **Rate Limiting** — random delay per request to avoid getting blocked
+- **User-Agent Rotation** — pool of 20 real browser User-Agents, rotated randomly per request
 - **Sitemap Index Support** — auto-detects sitemap index files and fetches all child sitemaps
-- **Excel Export** — results exported to `.xlsx` with status code, status text, and redirect URL columns
+- **Real-time CSV Export** — results streamed to CSV as they come in
+- **Progress Bar** — live progress with speed, ETA, and error count
 - **CLI Flags** — all settings configurable via `--help`
 
 ---
 
-## Installation
+## Download
 
-### Prerequisites
+Pre-built binaries for Windows, macOS, and Linux are available on the [Releases](https://github.com/forceki/sitemap-crawler/releases) page.
 
-- [Rust](https://www.rust-lang.org/tools/install) (1.70+)
+| Platform | File |
+|----------|------|
+| Windows  | `sitemap-crawl-windows-amd64.zip` |
+| macOS (Intel) | `sitemap-crawl-macos-amd64.tar.gz` |
+| macOS (Apple Silicon) | `sitemap-crawl-macos-arm64.tar.gz` |
+| Linux | `sitemap-crawl-linux-amd64.tar.gz` |
 
-### Build
+---
+
+## Quick Start
 
 ```bash
-# Debug build
-cargo build
+# Windows
+sitemap-crawl.exe https://example.com/sitemap.xml
 
-# Optimized release build
-cargo build --release
+# macOS / Linux
+./sitemap-crawl https://example.com/sitemap.xml
 ```
-
-The binary will be at `target/release/sitemap-crawl`.
 
 ---
 
@@ -58,8 +65,7 @@ sitemap-crawl [OPTIONS] <URL>
 | `--concurrency` | `-c` | Max concurrent requests | `50` |
 | `--timeout` | `-t` | Request timeout (seconds) | `10` |
 | `--delay` | `-d` | Delay between requests per worker (ms) | `100` |
-| `--user-agent` | `-u` | Custom User-Agent header | Firefox UA |
-| `--output` | `-o` | Output `.xlsx` file path | `result/sitemap_<timestamp>.xlsx` |
+| `--output` | `-o` | Output file path | `result/sitemap_<timestamp>.csv` |
 | `--help` | `-h` | Show help | — |
 | `--version` | `-V` | Show version | — |
 
@@ -69,46 +75,95 @@ sitemap-crawl [OPTIONS] <URL>
 # Crawl a website (follows links, stays on same domain)
 sitemap-crawl https://example.com
 
-# Parse a product sitemap and check all URLs
+# Parse a sitemap and check all URLs
 sitemap-crawl https://example.com/sitemap-products-1.xml
 
-# Conservative mode: 10 workers, 500ms delay between requests
+# Conservative: 10 workers, 500ms delay
 sitemap-crawl -c 10 -d 500 https://example.com/sitemap-products-1.xml
 
 # Custom output file
-sitemap-crawl -o result/exampel.xlsx https://example.com/sitemap-products-1.xml
+sitemap-crawl -o result/my_audit.csv https://example.com/sitemap.xml
 
-# Full options
-sitemap-crawl -c 20 -t 15 -d 200 -o result/audit.xlsx https://example.com/sitemap.xml
+# All options
+sitemap-crawl -c 20 -t 15 -d 200 -o result/audit.csv https://example.com/sitemap.xml
 ```
 
 ---
 
 ## Output
 
-### Console
+### Console (Progress Bar)
 
 ```
-Status Check Results
-─────────────────────────
-  ✅ 2xx OK          : 142
-  🔀 3xx Redirect    : 3
-  ⚠️  4xx Client Err  : 1
-  ❌ 5xx Server Err  : 0
-  💀 Connection Err  : 0
-  ─────────────────────
-  Total              : 146
-
-Exported to result/sitemap_20260226_075300.xlsx
+⠹ [00:01:24] [███████████████████▓▒░                   ] 342/1200 (4.1/s) ✅ 330 ❌ 8
+  ⚠ https://example.com/old-page [404]
+  ✗ https://example.com/broken [Timeout]
 ```
 
-### Excel (`.xlsx`)
+### CSV (Real-time)
 
-| No. | URL | Status | Status Text | Redirect URL |
-|-----|-----|--------|-------------|--------------|
-| 1 | https://example.com/ | 200 | OK | |
-| 2 | https://example.com/about | 301 | Moved Permanently | https://example.com/about/ |
-| 3 | https://example.com/old-page | 404 | Not Found | |
+Results are saved to `result/` as they come in:
+
+```
+No,URL,Status,Status Text,Redirect URL
+1,"https://example.com/",200,"OK",""
+2,"https://example.com/about",301,"Moved Permanently","https://example.com/about/"
+3,"https://example.com/old-page",404,"Not Found",""
+```
+
+You can `tail -f result/sitemap_*.csv` to watch results live, or open with Excel / Google Sheets.
+
+---
+
+## Troubleshooting
+
+### Windows: "Windows protected your PC" (SmartScreen)
+
+This appears because the `.exe` is not digitally signed. To bypass:
+
+1. Click **"More info"**
+2. Click **"Run anyway"**
+
+Or run from PowerShell directly:
+
+```powershell
+cd C:\Users\YourName\Downloads
+.\sitemap-crawl.exe --help
+```
+
+### Windows: Antivirus warning
+
+Some antivirus may flag unsigned executables. Add an exception for `sitemap-crawl.exe`, or [build from source](#building-from-source).
+
+### macOS: "Cannot be opened because the developer cannot be verified"
+
+Run once to remove the quarantine flag:
+
+```bash
+xattr -d com.apple.quarantine ./sitemap-crawl
+```
+
+### Linux: "Permission denied"
+
+```bash
+chmod +x ./sitemap-crawl
+```
+
+---
+
+## Building from Source
+
+### Prerequisites
+
+- [Rust](https://rustup.rs) (1.70+)
+
+```bash
+git clone https://github.com/forceki/sitemap-crawler.git
+cd sitemap-crawler
+cargo build --release
+```
+
+The binary will be at `target/release/sitemap-crawl`.
 
 ---
 
@@ -116,14 +171,15 @@ Exported to result/sitemap_20260226_075300.xlsx
 
 ```
 src/
-├── main.rs            # Entry point, CLI wiring, output
+├── main.rs            # Entry point, CLI, progress bar, output
 ├── config.rs          # CLI args (clap) & defaults
-├── checker.rs         # Concurrent URL status checker
+├── checker.rs         # Concurrent URL status checker (streaming)
 ├── client.rs          # HTTP client factory
 ├── crawler.rs         # BFS crawl engine (follows links)
 ├── extractor.rs       # HTML link extraction & resolution
 ├── fetcher.rs         # Async page fetcher with error handling
-├── export.rs          # Excel (.xlsx) export
+├── export.rs          # CSV (real-time) & XLSX export
+├── user_agents.rs     # User-Agent rotation pool (20 browsers)
 ├── sitemap.rs         # Sitemap XML generator
 └── sitemap_parser.rs  # Sitemap XML parser (with index support)
 ```
@@ -140,8 +196,10 @@ src/
 | `url` | URL resolution & normalization |
 | `futures` | `FuturesUnordered` for concurrency |
 | `quick-xml` | Sitemap XML parsing |
-| `rust_xlsxwriter` | Excel export |
 | `clap` | CLI argument parsing |
+| `indicatif` | Progress bar |
+| `tracing` | Structured logging |
+| `rand` | Random delay & User-Agent rotation |
 | `chrono` | Timestamps |
 
 ---
