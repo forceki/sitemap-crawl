@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - "main"  # Workflow akan jalan setiap ada push ke branch main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            artifact: sitemap-crawl-linux-amd64
+            binary: sitemap-crawl
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            artifact: sitemap-crawl-macos-amd64
+            binary: sitemap-crawl
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            artifact: sitemap-crawl-macos-arm64
+            binary: sitemap-crawl
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            artifact: sitemap-crawl-windows-amd64
+            binary: sitemap-crawl.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Package binary (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/${{ matrix.binary }} dist/
+          cp README.txt dist/
+          cd dist && tar -czf ../${{ matrix.artifact }}.tar.gz *
+
+      - name: Package binary (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          New-Item -ItemType Directory -Force -Path dist
+          Copy-Item "target\${{ matrix.target }}\release\${{ matrix.binary }}" -Destination "dist\"
+          Copy-Item "README.txt" -Destination "dist\"
+          Compress-Archive -Path "dist\*" -DestinationPath "${{ matrix.artifact }}.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            ${{ matrix.artifact }}.tar.gz
+            ${{ matrix.artifact }}.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/**/*.tar.gz
+            artifacts/**/*.zip
