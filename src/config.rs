@@ -11,12 +11,13 @@ pub const DEFAULT_USER_AGENT: &str =
 #[command(
     name = "sitemap-crawl",
     about = "Concurrent Sitemap Crawler & URL Status Checker",
-    long_about = "Crawl a website or parse a sitemap XML, then check HTTP status of every URL.\n\nModes:\n  • Crawl mode   — pass a regular URL (e.g. https://example.com)\n  • Sitemap mode — pass a .xml URL (e.g. https://example.com/sitemap.xml)\n\nResults are exported to a timestamped .xlsx file with color-coded status.",
+    long_about = "Crawl websites or parse sitemap XMLs, then check HTTP status of every URL.\n\nSupports multiple URLs in a single run. Each URL is auto-detected as crawl or sitemap mode.\n\nExamples:\n  sitemap-crawl https://example.com\n  sitemap-crawl https://example.com/sitemap.xml\n  sitemap-crawl https://a.com/sitemap.xml https://b.com/sitemap.xml\n  sitemap-crawl https://a.com/s1.xml https://a.com/s2.xml.gz",
     version
 )]
 pub struct AppConfig {
-    /// Target URL to crawl or sitemap XML URL to parse
-    pub url: String,
+    /// One or more URLs to crawl or sitemap XMLs to parse
+    #[arg(required = true)]
+    pub urls: Vec<String>,
 
     /// Max concurrent requests
     #[arg(short, long, default_value_t = DEFAULT_CONCURRENCY)]
@@ -34,7 +35,7 @@ pub struct AppConfig {
     #[arg(short, long, default_value = DEFAULT_USER_AGENT)]
     pub user_agent: String,
 
-    /// Output xlsx file name (default: sitemap_<timestamp>.xlsx)
+    /// Output file name (default: result/sitemap_<timestamp>.csv)
     #[arg(short, long)]
     pub output: Option<String>,
 }
@@ -47,8 +48,8 @@ impl AppConfig {
     pub fn delay_duration(&self) -> Duration {
         Duration::from_millis(self.delay)
     }
+}
 
-    pub fn is_sitemap_xml(&self) -> bool {
-        self.url.ends_with(".xml") || self.url.ends_with(".xml.gz")
-    }
+pub fn is_sitemap_url(url: &str) -> bool {
+    url.ends_with(".xml") || url.ends_with(".xml.gz")
 }

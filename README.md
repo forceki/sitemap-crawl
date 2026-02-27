@@ -41,6 +41,9 @@ sitemap-crawl.exe https://example.com/sitemap.xml
 
 # macOS / Linux
 ./sitemap-crawl https://example.com/sitemap.xml
+
+# Multiple sitemaps in one run
+./sitemap-crawl https://example.com/sitemap-1.xml https://example.com/sitemap-2.xml
 ```
 
 ---
@@ -48,15 +51,17 @@ sitemap-crawl.exe https://example.com/sitemap.xml
 ## Usage
 
 ```
-sitemap-crawl [OPTIONS] <URL>
+sitemap-crawl [OPTIONS] <URL>...
 ```
+
+You can pass **one or more URLs**. Each URL is auto-detected as crawl or sitemap mode. URLs from all inputs are deduplicated before checking.
 
 ### Modes
 
 | Mode | Trigger | Example |
 |------|---------|---------|
 | **Crawl** | Regular URL | `sitemap-crawl https://example.com` |
-| **Sitemap** | URL ending in `.xml` | `sitemap-crawl https://example.com/sitemap.xml` |
+| **Sitemap** | URL ending in `.xml` or `.xml.gz` | `sitemap-crawl https://example.com/sitemap.xml` |
 
 ### Options
 
@@ -72,20 +77,26 @@ sitemap-crawl [OPTIONS] <URL>
 ### Examples
 
 ```bash
+# Single sitemap
+sitemap-crawl https://example.com/sitemap.xml
+
+# Multiple sitemaps (all checked in one run, results merged)
+sitemap-crawl https://example.com/sitemap-products.xml https://example.com/sitemap-pages.xml
+
+# Gzip-compressed sitemaps
+sitemap-crawl https://www.example.com/sitemap-index.xml.gz
+
+# Mix sitemaps and crawl targets
+sitemap-crawl https://example.com https://other.com/sitemap.xml
+
 # Crawl a website (follows links, stays on same domain)
 sitemap-crawl https://example.com
 
-# Parse a sitemap and check all URLs
-sitemap-crawl https://example.com/sitemap-products-1.xml
-
 # Conservative: 10 workers, 500ms delay
-sitemap-crawl -c 10 -d 500 https://example.com/sitemap-products-1.xml
+sitemap-crawl -c 10 -d 500 https://example.com/sitemap.xml
 
 # Custom output file
 sitemap-crawl -o result/my_audit.csv https://example.com/sitemap.xml
-
-# All options
-sitemap-crawl -c 20 -t 15 -d 200 -o result/audit.csv https://example.com/sitemap.xml
 ```
 
 ---
