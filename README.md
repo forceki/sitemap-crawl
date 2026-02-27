@@ -22,7 +22,7 @@ Crawl a website or parse a sitemap XML, then check the HTTP status of every URL 
 
 ## Download
 
-Pre-built binaries for Windows, macOS, and Linux are available on the [Releases](https://github.com/forceki/sitemap-crawler/releases) page.
+Pre-built binaries for Windows, macOS, and Linux are available on the [Releases](https://github.com/forceki/sitemap-crawl/releases) page.
 
 | Platform | File |
 |----------|------|
