@@ -9,7 +9,7 @@ use tokio::sync::mpsc;
 use tracing::error;
 
 use crate::config::AppConfig;
-use crate::user_agents::random_user_agent;
+use crate::client::get_with_retry;
 
 use rand::Rng;
 
@@ -68,8 +68,7 @@ pub async fn check_urls_stream(
 
             let _done = completed.fetch_add(1, Ordering::Relaxed) + 1;
 
-            let ua = random_user_agent();
-            let status = match client.get(&url).header("User-Agent", ua).send().await {
+            let status = match get_with_retry(&client, &url, 3).await {
                 Ok(resp) => {
                     let code = resp.status().as_u16();
                     let text = resp.status().canonical_reason()

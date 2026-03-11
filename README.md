@@ -11,7 +11,7 @@ Crawl a website or parse a sitemap XML, then check the HTTP status of every URL 
 - **Dual Mode** — crawl by following links _or_ parse a sitemap XML directly
 - **Concurrent** — powered by `tokio`, `FuturesUnordered`, and a configurable semaphore
 - **Status Checker** — checks every discovered URL for `200`, `301`, `404`, `500`, timeouts, etc.
-- **Rate Limiting** — random delay per request to avoid getting blocked
+- **Rate Limiting & Retries** — handles `429 Too Many Requests` and `5xx` errors with exponential backoff and respects the `Retry-After` header. Random delay per request to avoid getting blocked.
 - **User-Agent Rotation** — pool of 20 real browser User-Agents, rotated randomly per request
 - **Sitemap Index Support** — auto-detects sitemap index files and fetches all child sitemaps
 - **Real-time CSV Export** — results streamed to CSV as they come in

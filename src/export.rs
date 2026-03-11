@@ -4,8 +4,6 @@ use std::io::{BufWriter, Write};
 
 use crate::checker::UrlStatus;
 
-// ─── CSV Writer (real-time, appends each row immediately) ────────────────────
-
 pub struct CsvWriter {
     writer: BufWriter<File>,
     row_count: u32,
@@ -31,7 +29,6 @@ impl CsvWriter {
 
         let redirect = result.redirect_url.as_deref().unwrap_or("");
 
-        // Escape fields that might contain commas or quotes
         writeln!(
             self.writer,
             "{},\"{}\",{},\"{}\",\"{}\"",
@@ -50,8 +47,6 @@ impl CsvWriter {
         self.row_count
     }
 }
-
-// ─── XLSX Writer (final export) ──────────────────────────────────────────────
 
 pub fn export_to_xlsx(results: &[UrlStatus], path: &str) -> Result<(), XlsxError> {
     let mut workbook = Workbook::new();

@@ -37,7 +37,6 @@ async fn main() {
         "Starting sitemap-crawl"
     );
 
-    // ── Discover URLs from all inputs ─────────────────────────────────────
     let mut all_discovered: Vec<String> = Vec::new();
 
     for input_url in &config.urls {
@@ -54,13 +53,11 @@ async fn main() {
         }
     }
 
-    // Deduplicate across all inputs
     all_discovered.sort();
     all_discovered.dedup();
 
     info!(count = all_discovered.len(), "Total unique URLs to check");
 
-    // ── Prepare output ────────────────────────────────────────────────────
     let output_dir = "result/";
     std::fs::create_dir_all(output_dir).expect("Failed to create result/ directory");
 
@@ -72,7 +69,6 @@ async fn main() {
     let mut csv_writer = CsvWriter::new(&csv_path).expect("Failed to create CSV writer");
     info!(path = %csv_path, "Streaming results to CSV");
 
-    // ── Check all URLs with progress bar ──────────────────────────────────
     let total = all_discovered.len();
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<UrlStatus>();
 
@@ -119,7 +115,6 @@ async fn main() {
     check_handle.await.expect("Checker task panicked");
     pb.finish_with_message(format!("Done — ✅ {} ❌ {}", ok_count, err_count));
 
-    // ── Summary ───────────────────────────────────────────────────────────
     info!(path = %csv_path, rows = csv_writer.row_count(), "CSV export complete");
 
     let ok_count = all_results.iter().filter(|r| matches!(r.status_code, Some(200..=299))).count();

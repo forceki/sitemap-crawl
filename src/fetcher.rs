@@ -2,11 +2,9 @@ use reqwest::Client;
 use tracing::{warn, error, debug};
 use url::Url;
 
-use crate::user_agents::random_user_agent;
-
+use crate::client::get_with_retry;
 pub async fn fetch_page(client: &Client, url: &Url) -> Option<String> {
-    let ua = random_user_agent();
-    match client.get(url.as_str()).header("User-Agent", ua).send().await {
+    match get_with_retry(client, url.as_str(), 3).await {
         Ok(resp) => {
             let status = resp.status();
             if !status.is_success() {

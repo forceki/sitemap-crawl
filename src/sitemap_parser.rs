@@ -6,9 +6,7 @@ use std::io::Read;
 use tracing::{info, warn, error};
 use url::Url;
 
-use crate::client::build_client;
-use crate::user_agents::random_user_agent;
-
+use crate::client::{build_client, get_with_retry};
 pub async fn parse_sitemap(sitemap_url: &str) -> Vec<String> {
     let client = build_client().expect("Failed to build HTTP client");
 
@@ -49,10 +47,9 @@ pub async fn parse_sitemap(sitemap_url: &str) -> Vec<String> {
 }
 
 async fn fetch_xml(client: &Client, url: &str) -> Option<String> {
-    let ua = random_user_agent();
     let is_gz = url.ends_with(".gz");
 
-    match client.get(url).header("User-Agent", ua).send().await {
+    match get_with_retry(client, url, 3).await {
         Ok(resp) => {
             if !resp.status().is_success() {
                 warn!(status = %resp.status(), url = %url, "HTTP error fetching sitemap");
@@ -60,7 +57,6 @@ async fn fetch_xml(client: &Client, url: &str) -> Option<String> {
             }
 
             if is_gz {
-                // Fetch as raw bytes and decompress gzip
                 match resp.bytes().await {
                     Ok(bytes) => {
                         info!(url = %url, compressed_bytes = bytes.len(), "Downloaded .gz sitemap");
@@ -78,7 +74,6 @@ async fn fetch_xml(client: &Client, url: &str) -> Option<String> {
                     }
                 }
             } else {
-                // Plain XML
                 match resp.text().await {
                     Ok(body) => Some(body),
                     Err(e) => {
