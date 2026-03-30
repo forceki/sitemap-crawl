@@ -38,6 +38,10 @@ pub struct AppConfig {
     /// Output file name (default: result/sitemap_<timestamp>.csv)
     #[arg(short, long)]
     pub output: Option<String>,
+
+    /// Proxy server URL (e.g., http://127.0.0.1:8080)
+    #[arg(short, long)]
+    pub proxy: Option<String>,
 }
 
 impl AppConfig {

@@ -13,7 +13,7 @@ use crate::fetcher::fetch_page;
 
 type VisitedSet = Arc<Mutex<HashSet<String>>>;
 
-pub async fn crawl(start_url: &str) -> Vec<String> {
+pub async fn crawl(start_url: &str, proxy: Option<&str>) -> Vec<String> {
     let seed = Url::parse(start_url).expect("Invalid start URL");
     let allowed_host = seed
         .host_str()
@@ -22,7 +22,7 @@ pub async fn crawl(start_url: &str) -> Vec<String> {
 
     info!(url = %seed, host = %allowed_host, "Starting crawl");
 
-    let client = build_client().expect("Failed to build HTTP client");
+    let client = build_client(proxy).expect("Failed to build HTTP client");
     let visited: VisitedSet = Arc::new(Mutex::new(HashSet::new()));
     let semaphore = Arc::new(Semaphore::new(DEFAULT_CONCURRENCY));
 

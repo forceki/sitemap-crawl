@@ -7,8 +7,8 @@ use tracing::{info, warn, error};
 use url::Url;
 
 use crate::client::{build_client, get_with_retry};
-pub async fn parse_sitemap(sitemap_url: &str) -> Vec<String> {
-    let client = build_client().expect("Failed to build HTTP client");
+pub async fn parse_sitemap(sitemap_url: &str, proxy: Option<&str>) -> Vec<String> {
+    let client = build_client(proxy).expect("Failed to build HTTP client");
 
     info!(url = %sitemap_url, "Downloading sitemap");
 

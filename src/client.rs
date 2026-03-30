@@ -5,10 +5,15 @@ use tracing::warn;
 use crate::config::DEFAULT_TIMEOUT;
 use crate::user_agents::random_user_agent;
 
-pub fn build_client() -> reqwest::Result<Client> {
-    Client::builder()
-        .timeout(std::time::Duration::from_secs(DEFAULT_TIMEOUT))
-        .build()
+pub fn build_client(proxy: Option<&str>) -> reqwest::Result<Client> {
+    let mut builder = Client::builder()
+        .timeout(std::time::Duration::from_secs(DEFAULT_TIMEOUT));
+        
+    if let Some(p) = proxy {
+        builder = builder.proxy(reqwest::Proxy::all(p)?);
+    }
+    
+    builder.build()
 }
 
 pub async fn get_with_retry(client: &Client, url: &str, max_retries: u32) -> Result<Response, reqwest::Error> {

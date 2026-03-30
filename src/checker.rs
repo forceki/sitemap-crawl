@@ -41,11 +41,15 @@ pub async fn check_urls_stream(
     config: &AppConfig,
     tx: mpsc::UnboundedSender<UrlStatus>,
 ) {
-    let client = Client::builder()
+    let mut builder = Client::builder()
         .timeout(config.timeout_duration())
-        .redirect(reqwest::redirect::Policy::none())
-        .build()
-        .expect("Failed to build HTTP client");
+        .redirect(reqwest::redirect::Policy::none());
+
+    if let Some(p) = &config.proxy {
+        builder = builder.proxy(reqwest::Proxy::all(p).expect("Invalid proxy URL"));
+    }
+
+    let client = builder.build().expect("Failed to build HTTP client");
 
     let semaphore = Arc::new(Semaphore::new(config.concurrency));
     let delay_ms = config.delay;
