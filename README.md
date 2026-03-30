@@ -71,6 +71,7 @@ You can pass **one or more URLs**. Each URL is auto-detected as crawl or sitemap
 | `--timeout` | `-t` | Request timeout (seconds) | `10` |
 | `--delay` | `-d` | Delay between requests per worker (ms) | `100` |
 | `--output` | `-o` | Output file path | `result/sitemap_<timestamp>.csv` |
+| `--proxy` | `-p` | Proxy | `http://127.0.0.1:8080` |
 | `--help` | `-h` | Show help | — |
 | `--version` | `-V` | Show version | — |
 
