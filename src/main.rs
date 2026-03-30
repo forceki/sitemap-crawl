@@ -42,12 +42,12 @@ async fn main() {
     for input_url in &config.urls {
         if is_sitemap_url(input_url) {
             info!(url = %input_url, "Parsing sitemap");
-            let urls = parse_sitemap(input_url, config.proxy.as_deref()).await;
+            let urls = parse_sitemap(input_url, config.proxy.as_deref(), config.retry).await;
             info!(count = urls.len(), url = %input_url, "Found URLs from sitemap");
             all_discovered.extend(urls);
         } else {
             info!(url = %input_url, "Crawling website");
-            let urls = crawl(input_url, config.proxy.as_deref()).await;
+            let urls = crawl(input_url, config.proxy.as_deref(), config.retry).await;
             info!(count = urls.len(), url = %input_url, "Found URLs from crawl");
             all_discovered.extend(urls);
         }

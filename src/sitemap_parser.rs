@@ -7,12 +7,12 @@ use tracing::{info, warn, error};
 use url::Url;
 
 use crate::client::{build_client, get_with_retry};
-pub async fn parse_sitemap(sitemap_url: &str, proxy: Option<&str>) -> Vec<String> {
+pub async fn parse_sitemap(sitemap_url: &str, proxy: Option<&str>, max_retries: u32) -> Vec<String> {
     let client = build_client(proxy).expect("Failed to build HTTP client");
 
     info!(url = %sitemap_url, "Downloading sitemap");
 
-    let xml = match fetch_xml(&client, sitemap_url).await {
+    let xml = match fetch_xml(&client, sitemap_url, max_retries).await {
         Some(body) => body,
         None => {
             error!(url = %sitemap_url, "Failed to fetch sitemap XML");
@@ -26,7 +26,7 @@ pub async fn parse_sitemap(sitemap_url: &str, proxy: Option<&str>) -> Vec<String
         let mut all_urls = Vec::new();
 
         for child_sitemap in urls.iter() {
-            if let Some(child_xml) = fetch_xml(&client, child_sitemap).await {
+            if let Some(child_xml) = fetch_xml(&client, child_sitemap, max_retries).await {
                 let child_urls = extract_locs(&child_xml);
                 info!(count = child_urls.len(), url = %child_sitemap, "Parsed child sitemap");
                 all_urls.extend(child_urls);
@@ -46,10 +46,10 @@ pub async fn parse_sitemap(sitemap_url: &str, proxy: Option<&str>) -> Vec<String
     }
 }
 
-async fn fetch_xml(client: &Client, url: &str) -> Option<String> {
+async fn fetch_xml(client: &Client, url: &str, max_retries: u32) -> Option<String> {
     let is_gz = url.ends_with(".gz");
 
-    match get_with_retry(client, url, 3).await {
+    match get_with_retry(client, url, max_retries).await {
         Ok(resp) => {
             if !resp.status().is_success() {
                 warn!(status = %resp.status(), url = %url, "HTTP error fetching sitemap");

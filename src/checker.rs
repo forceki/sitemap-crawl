@@ -63,6 +63,7 @@ pub async fn check_urls_stream(
         let url = url.clone();
         let completed = Arc::clone(&completed);
         let tx = tx.clone();
+        let max_retries = config.retry;
 
         futures.push(tokio::spawn(async move {
             let _permit = sem.acquire().await.expect("semaphore closed");
@@ -72,7 +73,7 @@ pub async fn check_urls_stream(
 
             let _done = completed.fetch_add(1, Ordering::Relaxed) + 1;
 
-            let status = match get_with_retry(&client, &url, 3).await {
+            let status = match get_with_retry(&client, &url, max_retries).await {
                 Ok(resp) => {
                     let code = resp.status().as_u16();
                     let text = resp.status().canonical_reason()

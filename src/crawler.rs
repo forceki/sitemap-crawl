@@ -13,7 +13,7 @@ use crate::fetcher::fetch_page;
 
 type VisitedSet = Arc<Mutex<HashSet<String>>>;
 
-pub async fn crawl(start_url: &str, proxy: Option<&str>) -> Vec<String> {
+pub async fn crawl(start_url: &str, proxy: Option<&str>, max_retries: u32) -> Vec<String> {
     let seed = Url::parse(start_url).expect("Invalid start URL");
     let allowed_host = seed
         .host_str()
@@ -51,7 +51,7 @@ pub async fn crawl(start_url: &str, proxy: Option<&str>) -> Vec<String> {
 
                 info!(url = %url, "Crawling");
 
-                if let Some(body) = fetch_page(&client, &url).await {
+                if let Some(body) = fetch_page(&client, &url, max_retries).await {
                     let links = extract_links(&body, &url, &host);
                     let new_count;
 

@@ -4,6 +4,7 @@ use clap::Parser;
 pub const DEFAULT_CONCURRENCY: usize = 50;
 pub const DEFAULT_TIMEOUT: u64 = 10;
 pub const DEFAULT_DELAY: u64 = 100;
+pub const DEFAULT_RETRY: u32 = 3;
 pub const DEFAULT_USER_AGENT: &str =
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.6; rv:37.0) Gecko/20100101 Firefox/37.0";
 
@@ -30,6 +31,10 @@ pub struct AppConfig {
     /// Delay between requests in milliseconds (per worker, to avoid rate limiting)
     #[arg(short, long, default_value_t = DEFAULT_DELAY)]
     pub delay: u64,
+
+    /// Max retries for requests
+    #[arg(short = 'r', long, default_value_t = DEFAULT_RETRY)]
+    pub retry: u32,
 
     /// Custom User-Agent header
     #[arg(short, long, default_value = DEFAULT_USER_AGENT)]

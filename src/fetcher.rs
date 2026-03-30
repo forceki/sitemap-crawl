@@ -3,8 +3,8 @@ use tracing::{warn, error, debug};
 use url::Url;
 
 use crate::client::get_with_retry;
-pub async fn fetch_page(client: &Client, url: &Url) -> Option<String> {
-    match get_with_retry(client, url.as_str(), 3).await {
+pub async fn fetch_page(client: &Client, url: &Url, max_retries: u32) -> Option<String> {
+    match get_with_retry(client, url.as_str(), max_retries).await {
         Ok(resp) => {
             let status = resp.status();
             if !status.is_success() {
